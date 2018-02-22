@@ -287,7 +287,6 @@ vertex * unprocessedVertices(graph myGraph) {
 
         // Shifting current
         current = current->next;
-        
     }
 
     return start;

@@ -61,6 +61,8 @@ Finds the shortest path between a starting point and a end point
     // Shortest now contains shortest path from vertex nb 0 to vertex nb 3
 ```
 
+**UNTESTED** If there is no shortest path, returns { INFINITY, NULL }.
+
 ## TODOs
 * Implement secure parsing from file
 * Implement errors management :

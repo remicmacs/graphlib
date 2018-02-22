@@ -44,6 +44,16 @@ int nextVertex(bool * processed, int * previousStep, int size);
  */
 int * updateStep(int * previousStep, int * newStep, int newVertex, graph myGraph);
 
+/**
+ * Function to return path from a full log of steps from Dijkstra's algorithm
+ *      Inputs :
+ *          {int **} log - the full log of steps
+ *          {int} size - the size of the log
+ *          {int} endId - the vertex goal of shortest path unique id
+ *          {path *} shortest - a pointer to path to complete
+ *      Output
+ *          {path *} shortest - filled path pointer
+ */
 path * formatShortestPath(int ** log, int size, int endId, path * shortest);
 
 /*
