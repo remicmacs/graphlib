@@ -1,11 +1,109 @@
 #include "graphlib.h"
 
-path * dijkstra(graph myGraph, int startId, int endId) {
-    // Initialization of shortest path
-    path * shortest = (path *) malloc(sizeof(path));
-    shortest->start = NULL;
-    shortest->cost = INFINITY;
+int compareEdges(const void * ptr1, const void * ptr2) {
+    edge * edge1 = (edge *) ptr1;
+    edge * edge2 = (edge *) ptr2;
 
+    if (edge1->weight < edge2->weight) return -1;
+    else if (edge1->weight > edge2->weight) return 1;
+    else return 0;
+}
+
+void displayEdge(edge anEdge) {
+    printf("<%d,%d>", anEdge.startId, anEdge.endId );
+
+    if (anEdge.weight == INFINITY) printf(": INF ;");
+    else printf(": %d ;", anEdge.weight);
+}
+
+void displayCosts(edge * costs, int size) {
+    printf("[");
+    for (int i = 0 ; i < size ; i++) {
+        edge currentEdge = *(costs+i);
+        //printf("<%d,%d>", currentEdge.startId, currentEdge.endId );
+
+        //if (currentEdge.weight == INFINITY) printf(" = INF ;");
+        //else printf(" %d ;", currentEdge.weight);
+        displayEdge(currentEdge);
+    }
+    printf("]\n");
+}
+
+edge * prim(graph myGraph, int startId) {
+    /**
+     * Initialization of unprocessed vertices list
+     * A bool matrix initialized to false
+     * if processedV[i] is true, vertex i has been processed
+     */
+    bool * processedV = (bool *) calloc(myGraph.verticenb, sizeof(bool));
+    int currentVertex = startId;
+
+    edge * costs = (edge *) malloc(sizeof(edge) * myGraph.verticenb);
+    
+    // Initializing costs to INIFINITY
+    edge startingEdge = { currentVertex, currentVertex, INFINITY};
+    for (int i = 0 ; i < myGraph.verticenb ; i++) {
+        edge currentEdge;
+        if (i != currentVertex) {
+            currentEdge.weight = INFINITY;
+            currentEdge.startId = currentVertex;
+            currentEdge.endId = i;
+        } else {
+            currentEdge = startingEdge;
+        }
+        *(costs+i) = currentEdge;
+    }
+    processedV[startId] = true;
+
+    // List of edges that will represent the minimum spanning tree
+    edge * minimumSpanningTree = (edge *) malloc(sizeof(edge) * (myGraph.verticenb-1));
+
+    // End of initialization
+    
+    for (int i = 1 ; i < myGraph.verticenb ; i++) {
+        edge betterEdge;
+        
+        // Processing current costs to vertices
+        costs = updateCosts(processedV, myGraph, costs, currentVertex);
+        
+        // Sorting the costs
+        qsort(costs, myGraph.verticenb, sizeof(edge), &compareEdges);
+        
+        // Taking minimum cost among unprocessed vertices
+        for (int j = 0 ; j < myGraph.verticenb ; j++) {
+            if (!processedV[(costs+j)->endId]) {
+                betterEdge = *(costs+j);
+                break;
+            }
+        }
+
+        *(minimumSpanningTree+i-1) = betterEdge;
+        processedV[betterEdge.endId] = true;
+        currentVertex = betterEdge.endId;
+    }
+
+    return minimumSpanningTree;
+}
+
+edge * updateCosts(bool * processedV, graph myGraph, edge * previousStep, int currentVertex) {
+    for (int i = 0; i < myGraph.verticenb ; i++) {
+        edge currentEdge = *(previousStep+i);
+
+        if (!processedV[currentEdge.endId]){
+            int newWeight = (*(myGraph.edges+(currentVertex*myGraph.verticenb)+currentEdge.endId) == 0) ? INFINITY : *(myGraph.edges+(currentVertex*myGraph.verticenb)+currentEdge.endId);
+
+            if( currentEdge.weight > newWeight ) {
+                currentEdge.startId = currentVertex;
+                currentEdge.weight = newWeight;
+                *(previousStep+i) = currentEdge;
+            }
+        }
+    }
+    return previousStep;
+
+}
+
+path ** dijkstra(graph myGraph, int startId, int endId) {
     // Init log of steps
     int ** steps = (int **) malloc(sizeof(int *) * myGraph.verticenb + 1);
 
@@ -34,7 +132,7 @@ path * dijkstra(graph myGraph, int startId, int endId) {
      * if processedV[i] is true, vertex i has been processed
      */
     bool * processedV = (bool *) calloc(myGraph.verticenb, sizeof(bool));
-    // displayUnprocessed(processedV, myGraph.verticenb);
+// displayUnprocessed(processedV, myGraph.verticenb);
 
     
     // Finding next vertex to process
@@ -42,10 +140,6 @@ path * dijkstra(graph myGraph, int startId, int endId) {
 
     // while there is a new vertex to process, loop
     while (newVertex != INT_MIN) {
-        // printf("\nRound %d, current steps : \n", stepIndex);
-        // displaySteps(steps, stepIndex, myGraph.verticenb+1);
-        // printf("New vertex to process : %d\n", newVertex);
-        
         // Step init
         currentStep = (int *) malloc(sizeof(int) * myGraph.verticenb+1);
         *(steps+stepIndex) = currentStep; // Attaching current step to log
@@ -63,13 +157,22 @@ path * dijkstra(graph myGraph, int startId, int endId) {
     }
 
     // Printing final log of steps
-    printf("\n\nFINAL STEPS\n");
-    displaySteps(steps, stepIndex, myGraph.verticenb+1);
-
-    // vertex * list;
+    // printf("\n\nFINAL STEPS\n");
+    // displaySteps(steps, stepIndex, myGraph.verticenb+1);
     
-    shortest = formatShortestPath(steps, stepIndex-1, endId, shortest);
-    return shortest;
+    path ** list = (path ** ) malloc(sizeof(path *) * myGraph.verticenb);
+    // Initialization of shortest path
+    for (int i = 0 ; i < myGraph.verticenb ; i++) {
+        path * shortest = (path *) malloc(sizeof(path));
+        shortest->start = NULL;
+        shortest->cost = INFINITY;
+        shortest = formatShortestPath(steps, stepIndex-1, i, shortest);
+        *(list+i) = shortest;
+    }
+
+    free(processedV);
+
+    return list;
 }
 
 int nextVertex(bool * processed, int * previousStep, int size) {
@@ -77,18 +180,8 @@ int nextVertex(bool * processed, int * previousStep, int size) {
     int index;
     int minIndex = INT_MIN; // Minimum id of vertex is init to minimum
     
-    // DEBUG printf statement
-    // displayUnprocessed(processed, size);
-
     for (index = 0 ; index < size; index++) {
         if (!*(processed+index)){
-            ////////////////////////////////////////////////////////////////////
-            // DEBUG printf statement
-            // printf("Candidate vertex : %d\n", index);
-            // printf("Current min = [%d]:%d\n", minIndex, min);
-            // printf("Value of candidate = %d\n", *(previousStep+index+1));
-            ////////////////////////////////////////////////////////////////////
-
             // Finding shortest path in unprocessed vertices
             if (*(previousStep+index+1) < min) {
                 min = *(previousStep+index+1);
@@ -119,7 +212,6 @@ int * updateStep(
         if (i-1 == newVertex) { 
             *(newStep+i) = *(previousStep+i);
         } else if (edgeValue == 0) { // if there is no edge, do not change value
-            //printf("No edge");
             *(newStep+i) = *(previousStep+i);
         } else { // else value is updated
             // candidate value is cost from current vertex to vertex i-1
@@ -135,10 +227,10 @@ int * updateStep(
     return newStep;
 }
 
-path * formatShortestPath(int ** log, int size, int endId, path * shortest) {
+path * formatShortestPath(int ** log, int logSize, int endId, path * shortest) {
     // Cost is recovered in last step of log
-    shortest->cost = *(*(log+size)+endId+1);
-
+    shortest->cost = *(*(log+logSize)+endId+1);
+    shortest->endId = endId;
     // Current vertex init
     vertex * current = (vertex *) malloc(sizeof(vertex));
     current->vertexId = endId;
@@ -151,24 +243,24 @@ path * formatShortestPath(int ** log, int size, int endId, path * shortest) {
     int currVertex = endId;
 
     // Looping decrementing size of log used as index
-    while(size > 0) {
+    while(logSize > 0) {
         // Recovering cost
-        currCost = *(*(log+size)+currVertex+1);
-        prevCost = *(*(log+size-1)+currVertex+1);
+        currCost = *(*(log+logSize)+currVertex+1);
+        prevCost = *(*(log+logSize-1)+currVertex+1);
 
         // Doing stg only if current cost != cost of previous step
         if (currCost != prevCost) {
             // Allocating new vertex link of list
             previous = (vertex *) malloc(sizeof(vertex));
             // First element of previous step is the previous vertex in path
-            previous->vertexId = **(log+size);
+            previous->vertexId = **(log+logSize);
             currVertex = previous->vertexId;
 
             // Linking to current vertex and shifting backwards in path
             previous->next = current;
             current = previous;
         }
-        size--;
+        logSize--;
     }
     
     // Attaching list to path
@@ -194,8 +286,6 @@ graph parseGraph() {
 
     // Recovering number of vertices
     scanf("%d\n", &verticenb);
-
-    // printf("Parsed graph is of size %d\n", verticenb);
     
     // Graph initialization
     parsedGraph = initGraph(verticenb);
@@ -329,16 +419,23 @@ int * predecessorList(graph myGraph, int vertexId) {
 
 /******************************************************************************/
 
+// Exemple main on how to use the library
 int main(int argc, char ** argv) {
     graph myGraph = parseGraph();
-    path * shortest;
+    path ** list;
 
     displayGraphMatrix(myGraph);
 
-    shortest = dijkstra(myGraph, 0, 4);
-    printf("Cost of shortest path between X%d to X%d = %d\n", 0, 4, shortest->cost);
-    printf("<");
-    displayList(shortest->start);
-    printf(">\n");
+    list = dijkstra(myGraph, 0, 4);
+    for (int i = 0 ; i < myGraph.verticenb ; i++) {
+        path * shortest = *(list+i);
+        printf("Cost of shortest path between X%d to X%d = %d\n", 0, i, shortest->cost);
+        printf("<");
+        displayList(shortest->start);
+        printf(">\n");
+    }
 
+    edge * spanningTree = prim(myGraph, 0);
+    printf("Final spanning tree : \n");
+    displayCosts(spanningTree, myGraph.verticenb-1);
 }

@@ -1,6 +1,12 @@
-#include "c_utils.h"
+//#include "c_utils.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h> // for type max and min
 #define INFINITY INT_MAX
 #define INIT INT_MIN
+
+typedef enum bool_ {false, true} bool;
+
 
 typedef struct graph_ {
     int verticenb;
@@ -13,10 +19,23 @@ typedef struct vertex_ {
     struct vertex_ * next;
 } vertex;
 
+typedef struct edge_ {
+    int startId;
+    int endId;
+    int weight;
+} edge;
+
 typedef struct path_ {
     int cost;
+    int endId;
     vertex * start;
 } path;
+
+int compareEdges(const void * ptr1, const void * ptr2);
+
+edge * prim(graph myGraph, int startId);
+
+edge * updateCosts(bool * processedV, graph myGraph, edge * previousStep, int currentVertex);
 
 /**
  * Dijkstra algorithm to find shortest path between startId vertex and endId
@@ -27,12 +46,15 @@ typedef struct path_ {
  *          {int} startId - ID of starting point.
  *          {int} endId - ID of end point.
  *      Output : 
- *          {path *} shortestPath - { 
- *              {int} Cost - cost of shortest path.
- *              {vertex *} start - linked list of vertices of shortest path
+ *          {path ** } list - [{path}]
+ *              {path} : {
+ *                  {int} Cost - cost of shortest path
+ *                  {int} endId - ID of last vertex of path (goal)
+ *                  {vertex *} start - linked list of vertices of shortest path
+ *              }
  *          }
  */
-path * dijkstra(graph myGraph, int startId, int endId);
+path ** dijkstra(graph myGraph, int startId, int endId);
 
 /**
  * Function to find next vertex to process
@@ -100,6 +122,17 @@ void displayStep(int * step, int size);
  * Helper function to print log of steps
  */
 void displaySteps(int ** log, int stepnb, int sizeofsteps);
+
+/**
+ * Helper function to display a valuated edge
+ */
+void displayEdge(edge anEdge);
+
+
+/**
+ * Helper function to display a list of edges
+ */
+void displayCosts(edge * list, int nb);
 
 /**
  * UNUSED Function to initialize a list of vertices

@@ -3,6 +3,7 @@
  *
  * Header file for c_utils.c
  * ****************************************************************************/
+#define _GNU_SOURCE
 
 #include <stdlib.h> // for rand()
 #include <stdio.h>
